@@ -1,0 +1,69 @@
+---
+
+# -------------------------------------------------------------------------------------------------
+# Job Name
+# -------------------------------------------------------------------------------------------------
+name: params
+
+
+# -------------------------------------------------------------------------------------------------
+# Custom Variables
+# -------------------------------------------------------------------------------------------------
+env:
+  VERSIONS: >-
+    [
+      {
+        "NAME":    "PHP",
+        "VERSION": ["5.2"],
+        "FLAVOUR": ["latest"],
+        "ARCH":    ["linux/amd64"]
+      },
+      {
+        "NAME":    "PHP",
+        "VERSION": ["5.3", "5.4", "5.5"],
+        "FLAVOUR": ["latest", "alpine"],
+        "ARCH":    ["linux/amd64", "linux/arm64"]
+      }
+    ]
+  REFS: >-
+    {
+        "DEFAULT_BRANCH": "master",
+        "BRANCHES": "master",
+        "NUM_LATEST_TAGS": 1
+    }
+
+
+# -------------------------------------------------------------------------------------------------
+# When to run
+# -------------------------------------------------------------------------------------------------
+on:
+  workflow_call:
+    ###
+    ### OUTPUTS
+    ###
+    outputs:
+      versions:
+        description: "JSON string for versions. Use via: fromJson(needs.params.versions)"
+        value: ${{ jobs.params.outputs.versions }}
+      refs:
+        description: "JSON string for refs. Use via: fromJson(needs.params.refs)"
+        value: ${{ jobs.params.outputs.refs }}
+
+jobs:
+  params:
+    runs-on: ubuntu-latest
+
+    outputs:
+      versions: ${{ steps.set-versions.outputs.versions }}
+      refs: ${{ steps.set-refs.outputs.refs }}
+
+    steps:
+      - name: "[Set-Output] jsonify VERSIONS"
+        id: set-versions
+        run: |
+          echo "::set-output name=versions::$( echo '${{ env.VERSIONS }}' | jq -M -c )"
+
+      - name: "[Set-Output] jsonify REFS"
+        id: set-refs
+        run: |
+          echo "::set-output name=refs::$( echo '${{ env.REFS }}' | jq -M -c )"
