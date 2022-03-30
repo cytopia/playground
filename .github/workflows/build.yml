@@ -37,7 +37,10 @@ jobs:
           echo 'ref_type:         ${{ github.ref_type }}'
           echo 'ref:              ${{ github.ref }}'
           echo 'repository:       ${{ github.repository }}'
+          echo 'user.login:       ${{ github.event.pull_request.user.login }}'
           echo 'env:              ${{ github.env }}'
+
+
       - name: Print GitHub context
         run: echo "$GITHUB_CONTEXT"
         env:
