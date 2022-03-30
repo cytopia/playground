@@ -28,13 +28,15 @@ jobs:
           echo "${GITHUB_CONTEXT}"
       - name: full
         run: |
-          echo 'actor:      ${{ github.actor }}'
-          echo 'event_name: ${{ github.event_name }}'
-          echo 'ref_name:   ${{ github.ref_name }}'
-          echo 'base_ref:   ${{ github.base_ref }}'
-          echo 'ref_type:   ${{ github.ref_type }}'
-          echo 'repository: ${{ github.repository }}'
-          echo 'env:        ${{ github.env }}'
+          echo 'actor:            ${{ github.actor }}'
+          echo 'repository_owner: ${{ github.repository_owner }}'
+          echo 'event_name:       ${{ github.event_name }}'
+          echo 'ref_name:         ${{ github.ref_name }}'
+          echo 'base_ref:         ${{ github.base_ref }}'
+          echo 'ref_type:         ${{ github.ref_type }}'
+          echo 'ref:              ${{ github.ref }}'
+          echo 'repository:       ${{ github.repository }}'
+          echo 'env:              ${{ github.env }}'
 
 
             #          echo "${{ github }}"
