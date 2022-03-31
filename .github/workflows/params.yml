@@ -15,21 +15,21 @@ env:
       {
         "NAME":    "PHP",
         "VERSION": ["5.2"],
-        "FLAVOUR": ["latest"],
+        "FLAVOUR": ["default"],
         "ARCH":    ["linux/amd64"]
       },
       {
         "NAME":    "PHP",
-        "VERSION": ["5.3", "5.4", "5.5"],
-        "FLAVOUR": ["latest", "alpine"],
+        "VERSION": ["5.3", "5.4", "5.5", "5.6", "7.0", "7.1", "7.2", "7.3", "7.4", "8.0", "8.1", "8.2"],
+        "FLAVOUR": ["default"],
         "ARCH":    ["linux/amd64", "linux/arm64"]
       }
     ]
   REFS: >-
     {
         "DEFAULT_BRANCH": "master",
-        "BRANCHES": "master",
-        "NUM_LATEST_TAGS": 1
+        "BRANCHES": "",
+        "NUM_LATEST_TAGS": 0
     }
 
 
