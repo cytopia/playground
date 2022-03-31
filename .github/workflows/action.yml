@@ -47,7 +47,7 @@ jobs:
   base-amd64:
     needs:
       - configure
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/docker-multistage-build.yml
     with:
       has_refs: ${{ needs.configure.outputs.has_refs == 'true' }}
       run_tests: false
@@ -61,7 +61,7 @@ jobs:
   base-arm64:
     needs:
       - configure
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/docker-multistage-build.yml
     with:
       has_refs: ${{ needs.configure.outputs.has_refs == 'true' }}
       run_tests: false
