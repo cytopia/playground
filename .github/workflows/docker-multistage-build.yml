@@ -1,5 +1,5 @@
 ---
-name: Build multi-arch images
+name: "Build multistage docker images (multi -flavours, -versions, -architectures)"
 
 on:
   workflow_call:
@@ -11,22 +11,22 @@ on:
         description: 'The build matrix'
         required: true
         type: string
-      has_refs:
-        description: 'The ref build matrix as JSON string (list of git refs to build/deploy).'
+      stage:
+        description: 'The stage to build (Examples: base, mods, prod or work).'
+        required: true
+        type: string
+      stage_prev:
+        description: 'The previous stage (used for downloading previous artifact).'
         required: true
         type: string
       artifact_prefix:
         description: 'Unique artifact name prefix (to avoid overriding existing artifcats during parallel runs).'
         required: true
         type: string
-      flavour:
-        description: 'The flavour to build (Examples: base, mods, prod or work).'
+      has_refs:
+        description: 'The ref build matrix as JSON string (list of git refs to build/deploy).'
         required: true
-        type: string
-      flavour_prev:
-        description: 'The previous flavour (used for downloading previous artifact).'
-        required: true
-        type: string
+        type: boolean
       run_tests:
         description: 'Dertermines whether we run integration tests or not.'
         required: true
@@ -41,7 +41,7 @@ jobs:
   # JOB: BUILD
   # -----------------------------------------------------------------------------------------------
   build:
-    name: ${{ matrix.name }}-${{ matrix.version }}-${{ inputs.flavour }} (${{ matrix.arch }}) ${{ matrix.refs }}
+    name: ${{ matrix.name }}-${{ matrix.version }}-${{ inputs.stage }} (${{ matrix.arch }}) ${{ matrix.refs }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -56,14 +56,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-        if: inputs.has_refs == 0
+        if: ${{ !inputs.has_refs }}
 
       - name: "[SETUP] Checkout repository (ref: ${{ matrix.refs }})"
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: ${{ matrix.refs }}
-        if: inputs.has_refs != 0
+        if: ${{ inputs.has_refs }}
 
       - name: "[SETUP] Setup QEMU environment"
         uses: docker/setup-qemu-action@v1
@@ -78,8 +78,8 @@ jobs:
           VERSION="${{ matrix.version }}"
           ARCH="$( echo "${{ matrix.arch }}" | sed 's|/|-|g' )"
 
-          NAME_PREV="${{ inputs.artifact_prefix }}-${PRE_HASH}-${VERSION}-${ARCH}-${{ inputs.flavour_prev }}"
-          NAME_CURR="${{ inputs.artifact_prefix }}-${PRE_HASH}-${VERSION}-${ARCH}-${{ inputs.flavour }}"
+          NAME_PREV="${{ inputs.artifact_prefix }}-${PRE_HASH}-${VERSION}-${ARCH}-${{ inputs.stage_prev }}"
+          NAME_CURR="${{ inputs.artifact_prefix }}-${PRE_HASH}-${VERSION}-${ARCH}-${{ inputs.stage }}"
           echo "::set-output name=prev::${NAME_PREV}"
           echo "::set-output name=curr::${NAME_CURR}"
 
@@ -91,22 +91,22 @@ jobs:
       ###
       ### Download and import previously built image (if it exists)
       ###
-      - name: "[Artifact Load] Download previously built image"
-        uses: Wandalen/wretry.action@v1.0.11
-        with:
-          action: actions/download-artifact@v3
-          with: |
-            name: ${{ steps.set-artifact-name.outputs.prev }}
-          attempt_limit: 20
-          attempt_delay: 10000
-        if: ${{ inputs.flavour_prev != '' }}
+      #- name: "[Artifact Load] Download previously built image"
+      #  uses: Wandalen/wretry.action@v1.0.11
+      #  with:
+      #    action: actions/download-artifact@v3
+      #    with: |
+      #      name: ${{ steps.set-artifact-name.outputs.prev }}
+      #    attempt_limit: 20
+      #    attempt_delay: 10000
+      #  if: ${{ inputs.stage_prev != '' }}
 
       - name: "[Artifact Load] Import previously built image"
         uses: cytopia/shell-command-retry-action@v0.1.2
         with:
           command: |
             echo 'make load INFILE=${{ steps.set-artifact-name.outputs.prev }}'
-        if: ${{ inputs.flavour_prev != '' }}
+        if: ${{ inputs.stage_prev != '' }}
 
 
       # ------------------------------------------------------------
@@ -116,7 +116,7 @@ jobs:
         uses: cytopia/shell-command-retry-action@v0.1.2
         with:
           command: |
-            echo 'make build VERSION=${{ matrix.version }} FLAVOUR=${{ inputs.flavour }} ARCH=${{ matrix.arch }}'
+            echo 'make build VERSION=${{ matrix.version }} STAGE=${{ inputs.stage }} FLAVOUR=${{ matrix.flavour }} ARCH=${{ matrix.arch }}'
 
 
       # ------------------------------------------------------------
@@ -126,7 +126,7 @@ jobs:
         uses: cytopia/shell-command-retry-action@v0.1.2
         with:
           command: |
-            echo 'make test VERSION=${{ matrix.version }} FLAVOUR=${{ inputs.flavour }} ARCH=${{ matrix.arch }}'
+            echo 'make test VERSION=${{ matrix.version }} STAGE=${{ inputs.stage }} FLAVOUR=${{ matrix.flavour }} ARCH=${{ matrix.arch }}'
         if: ${{ inputs.run_tests }}
 
 
@@ -141,30 +141,30 @@ jobs:
         uses: cytopia/shell-command-retry-action@v0.1.2
         with:
           command: |
-            echo 'make save-verify VERSION=${{ matrix.version }} FLAVOUR=${{ inputs.flavour }} ARCH=${{ matrix.arch }} OUTFILE=${{ steps.set-artifact-name.outputs.curr }} INFILE=${{ steps.set-artifact-name.outputs.curr }}'
+            echo 'make save-verify VERSION=${{ matrix.version }} STAGE=${{ inputs.stage }} FLAVOUR=${{ matrix.flavour }} ARCH=${{ matrix.arch }} OUTFILE=${{ steps.set-artifact-name.outputs.curr }} INFILE=${{ steps.set-artifact-name.outputs.curr }}'
         if: ${{ inputs.upload_artifact }}
-
-      - name: "TODO REMOVE ME"
-        run: touch "${{ steps.set-artifact-name.outputs.curr }}"
 
       ###
       ### Upload current image
       ###
-      - name: "[Artifact Save] Upload currently built image"
-        uses: Wandalen/wretry.action@v1.0.11
-        with:
-          action: actions/upload-artifact@v3
-          with: |
-            name: ${{ steps.set-artifact-name.outputs.curr }}
-            path: ${{ steps.set-artifact-name.outputs.curr }}
-            if-no-files-found: error
-          attempt_limit: 20
-          attempt_delay: 10000
-        if: ${{ inputs.upload_artifact }}
+      #- name: "[Artifact Save] Upload currently built image"
+      #  uses: Wandalen/wretry.action@v1.0.11
+      #  with:
+      #    action: actions/upload-artifact@v3
+      #    with: |
+      #      name: ${{ steps.set-artifact-name.outputs.curr }}
+      #      path: ${{ steps.set-artifact-name.outputs.curr }}
+      #      if-no-files-found: error
+      #    attempt_limit: 20
+      #    attempt_delay: 10000
+      #  if: ${{ inputs.upload_artifact }}
 
-      - name: "[Artifact Save] Download (verify)"
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ steps.set-artifact-name.outputs.curr }}
-          path: ${{ steps.set-artifact-name.outputs.curr }}.tmp
-        if: ${{ inputs.upload_artifact }}
+      ###
+      ### Verify uploaded image
+      ###
+      #- name: "[Artifact Save] Download (verify)"
+      #  uses: actions/download-artifact@v3
+      #  with:
+      #    name: ${{ steps.set-artifact-name.outputs.curr }}
+      #    path: ${{ steps.set-artifact-name.outputs.curr }}.tmp
+      #  if: ${{ inputs.upload_artifact }}
