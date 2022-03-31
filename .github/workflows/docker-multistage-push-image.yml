@@ -45,6 +45,7 @@ jobs:
   test:
     name: ${{ matrix.name }}-${{ matrix.version }}-${{ inputs.stage }} (${{ matrix.arch }}) ${{ matrix.refs }}
     runs-on: ubuntu-latest
+    environment: dockerhub
     strategy:
       fail-fast: false
       matrix:
