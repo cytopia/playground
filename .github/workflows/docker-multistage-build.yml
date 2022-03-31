@@ -11,6 +11,10 @@ on:
         description: 'The build matrix'
         required: true
         type: string
+      arch:
+        description: 'The architecture to build against.'
+        required: true
+        type: string
       stage:
         description: 'The stage to build (Examples: base, mods, prod or work).'
         required: true
@@ -37,16 +41,55 @@ on:
         type: boolean
 
 jobs:
+  configure:
+    name: Configure
+    runs-on: ubuntu-latest
+
+    ###
+    ### Outputs
+    ###
+    outputs:
+      # Copied from inputs
+      #versions: ${{ inputs.versions }}
+      #refs: ${{ inputs.refs }}
+      ## Flags
+      #can_login: ${{ steps.set-login.outputs.can_login }}
+      #can_push: ${{ steps.set-push.outputs.can_push }}
+      #has_refs: ${{ steps.set-refs.outputs.has_refs }}
+      # Values
+      #artifact_prefix: ${{ steps.set-artifact-prefix.outputs.prefix }}
+      matrix_build: ${{ steps.set-matrix.outputs.matrix_build }}
+      arch_enabled: ${{ steps.set-matrix.outputs.arch_enabled }}
+
+    ###
+    ### Steps
+    ###
+    steps:
+      - name: "[Set-Output] matrix_build and matrix_deploy (Build Matrix & Deploy Matrix)"
+        id: set-matrix
+        shell: bash
+        run: |
+          MATRIX_BUILD="$( echo '${{ inputs.matrix }}' | jq -M -c 'map(select(.arch == "${{ inputs.arch }}"))' )"
+          if [ "${MATRIX_BUILD}" = "[]" ]; then
+            ARCH_ENABLED='false'
+          fi
+            ARCH_ENABLED='true'
+          fi
+          echo "::set-output name=matrix_build::${MATRIX_BUILD}"
+          echo "::set-output name=arch_enabled::${ARCH_ENABLED}"
+
   # -----------------------------------------------------------------------------------------------
   # JOB: BUILD
   # -----------------------------------------------------------------------------------------------
   build:
+    needs: [configure]
     name: ${{ matrix.name }}-${{ matrix.version }}-${{ inputs.stage }} (${{ matrix.arch }}) ${{ matrix.refs }}
     runs-on: ubuntu-latest
+    if: ${{ needs.configure.arch_enabled == 'true' }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(inputs.matrix) }}
+        include: ${{ fromJson(needs.configure.arch_enabled) }}
     steps:
 
       # ------------------------------------------------------------
