@@ -37,12 +37,10 @@ on:
         type: boolean
 
 jobs:
-
   # -----------------------------------------------------------------------------------------------
   # JOB: BUILD
   # -----------------------------------------------------------------------------------------------
   build:
-    needs: [configure]
     name: ${{ matrix.name }}-${{ matrix.version }}-${{ inputs.stage }} (${{ matrix.arch }}) ${{ matrix.refs }}
     runs-on: ubuntu-latest
     strategy:
