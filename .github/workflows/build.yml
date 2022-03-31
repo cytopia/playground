@@ -1,0 +1,98 @@
+---
+name: "Build multistage docker images (multi -flavours, -versions, -architectures)"
+
+on:
+  workflow_call:
+    ###
+    ### Variables
+    ###
+    inputs:
+      matrix:
+        description: 'The build matrix'
+        required: true
+        type: string
+      arch:
+        description: 'The architecture to build against.'
+        required: true
+        type: string
+      stage:
+        description: 'The stage to build (Examples: base, mods, prod or work).'
+        required: true
+        type: string
+      stage_prev:
+        description: 'The previous stage (used for downloading previous artifact).'
+        required: true
+        type: string
+      artifact_prefix:
+        description: 'Unique artifact name prefix (to avoid overriding existing artifcats during parallel runs).'
+        required: true
+        type: string
+      has_refs:
+        description: 'The ref build matrix as JSON string (list of git refs to build/deploy).'
+        required: true
+        type: boolean
+      run_tests:
+        description: 'Dertermines whether we run integration tests or not.'
+        required: true
+        type: boolean
+      upload_artifact:
+        description: 'Dertermines whether we upload the artifact not.'
+        required: true
+        type: boolean
+
+jobs:
+  # -----------------------------------------------------------------------------------------------
+  # JOB: BUILD
+  # -----------------------------------------------------------------------------------------------
+  configure:
+    name: Configure
+    runs-on: ubuntu-latest
+
+    ###
+    ### Outputs
+    ###
+    outputs:
+      # Copied from inputs
+      #versions: ${{ inputs.versions }}
+      #refs: ${{ inputs.refs }}
+      ## Flags
+      #can_login: ${{ steps.set-login.outputs.can_login }}
+      #can_push: ${{ steps.set-push.outputs.can_push }}
+      #has_refs: ${{ steps.set-refs.outputs.has_refs }}
+      # Values
+      #artifact_prefix: ${{ steps.set-artifact-prefix.outputs.prefix }}
+      matrix_build: ${{ steps.set-matrix.outputs.matrix_build }}
+      arch_enabled: ${{ steps.set-matrix.outputs.arch_enabled }}
+
+    ###
+    ### Steps
+    ###
+    steps:
+      - name: "[Set-Output] matrix_build and matrix_deploy (Build Matrix & Deploy Matrix)"
+        id: set-matrix
+        shell: bash
+        run: |
+          MATRIX_BUILD="$( echo '${{ inputs.matrix }}' | jq -M -c 'map(select(.arch == "${{ inputs.arch }}"))' )"
+          if [ "${MATRIX_BUILD}" = "[]" ]; then
+            ARCH_ENABLED='false'
+          fi
+            ARCH_ENABLED='true'
+          fi
+          echo "::set-output name=matrix_build::${MATRIX_BUILD}"
+          echo "::set-output name=arch_enabled::${ARCH_ENABLED}"
+
+  # -----------------------------------------------------------------------------------------------
+  # JOB: BUILD
+  # -----------------------------------------------------------------------------------------------
+  arch:
+    needs: [configure]
+    uses: ./.github/workflows/docker-multistage-build.yml
+    with:
+      has_refs: ${{ inputs.has_refs }}
+      run_tests: false
+      upload_artifact: true
+      matrix: ${{ needs.configure.matrix_build }}
+      artifact_prefix: ${{ inputs.artifact_prefix }}
+      stage: ${{ inputs.stage }}
+      stage_prev: ${{ inputs.stage_preg }}
+    if: ${{ needs.configure.arch_enabled == 'true' }}

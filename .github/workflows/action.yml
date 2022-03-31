@@ -42,6 +42,39 @@ jobs:
 
 
   # -----------------------------------------------------------------------------------------------
+  # (3/8) Build Parallel
+  # -----------------------------------------------------------------------------------------------
+  base-amd64:
+    needs:
+      - configure
+    uses: ./.github/workflows/build.yml
+    with:
+      has_refs: ${{ needs.configure.outputs.has_refs == 'true' }}
+      run_tests: false
+      upload_artifact: true
+      matrix: ${{ needs.configure.outputs.matrix_build }}
+      artifact_prefix: ${{ needs.configure.outputs.artifact_prefix }}
+      stage: base
+      stage_prev: ''
+      arch: "linux/amd64"
+
+  base-arm64:
+    needs:
+      - configure
+    uses: ./.github/workflows/build.yml
+    with:
+      has_refs: ${{ needs.configure.outputs.has_refs == 'true' }}
+      run_tests: false
+      upload_artifact: true
+      matrix: ${{ needs.configure.outputs.matrix_build }}
+      artifact_prefix: ${{ needs.configure.outputs.artifact_prefix }}
+      stage: base
+      stage_prev: ''
+      arch: "linux/arm64"
+
+
+
+  # -----------------------------------------------------------------------------------------------
   # (3/8) Build & Test base
   # -----------------------------------------------------------------------------------------------
   base:
